@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seguimiento de Cobranzas - SEGALEX</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f0f8ff; margin: 0; padding: 0; }
+    .container { text-align: center; padding: 40px; }
+    .logo { max-height: 80px; margin-bottom: 10px; }
+    h1 { color: #004b8d; margin: 0 0 20px; }
+    .modulo-btn {
+      background-color: white; color: #004b8d; border: 2px solid #004b8d;
+      margin: 0 5px; padding: 10px 20px; font-weight: bold;
+      border-radius: 5px; cursor: pointer; transition: all 0.3s ease;
+    }
+    .modulo-btn:hover { background-color: #004b8d; color: white; }
+    .modulo-btn.activo { background-color: #004b8d; color: white; }
+    .modulo-box {
+      display: none; max-width: 800px; margin: 20px auto; background: #ffffff;
+      padding: 20px; border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); opacity: 0;
+      transform: translateY(20px); transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .modulo-box.mostrar { display: block !important; opacity: 1; transform: translateY(0); }
+    .modulo-box.ocultar { opacity: 0; transform: translateY(20px); }
+    input, select, textarea {
+      width: 100%; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #ccc;
+    }
+    button.submit {
+      background-color: #004b8d; color: white; padding: 10px 20px;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    button.submit:hover { background-color: #003b73; }
+    .hito {
+      text-align: left; padding: 10px; margin-bottom: 10px;
+      border-left: 5px solid red;
+      background: #ffe6e6;
+    }
+    .hito.en-curso {
+      border-left-color: orange;
+      background: #fff3cd;
+    }
+    .hito.completado {
+      border-left-color: green;
+      background: #d4edda;
+    }
+  </style>
+  <script>
+    function mostrarModulo(modulo) {
+      const modulos = ['inicio', 'analisis', 'seguimiento'];
+      modulos.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.remove('mostrar');
+          el.classList.add('ocultar');
+          setTimeout(() => el.style.display = 'none', 300);
+        }
+      });
+      const btnInicio = document.getElementById('btnInicio');
+      const btnAnalisis = document.getElementById('btnAnalisis');
+      if (btnInicio) btnInicio.classList.remove('activo');
+      if (btnAnalisis) btnAnalisis.classList.remove('activo');
+
+      if (modulo === '') {
+        const menu = document.getElementById('menuPrincipal');
+        if (menu) menu.style.display = 'block';
+        document.querySelectorAll('input, select, textarea').forEach(el => el.value = '');
+        localStorage.removeItem('moduloActivo');
+        return;
+      } else {
+        const menu = document.getElementById('menuPrincipal');
+        if (menu) menu.style.display = 'none';
+      }
+
+      if (modulo === 'inicio' && btnInicio) btnInicio.classList.add('activo');
+      if (modulo === 'analisis' && btnAnalisis) btnAnalisis.classList.add('activo');
+
+      const box = document.getElementById(modulo);
+      if (box) {
+        box.style.display = 'block';
+        setTimeout(() => {
+          box.classList.remove('ocultar');
+          box.classList.add('mostrar');
+        }, 10);
+        localStorage.setItem('moduloActivo', modulo);
+      }
+    }
+
+    function iniciarCobranza() {
+      const rut = document.getElementById('rutDeudor').value;
+      const empresa = document.getElementById('empresaDeudora').value;
+      const monto = document.getElementById('montoFactura').value;
+      const responsable = document.getElementById('responsableCobranza').value;
+
+      if (!rut || !empresa || !monto || !responsable) {
+        alert('Por favor, completa todos los campos para iniciar la cobranza.');
+        return;
+      }
+
+      mostrarModulo('seguimiento');
+      document.getElementById('seguimientoMonto').innerText = monto;
+      document.getElementById('seguimientoEmpresa').innerText = empresa;
+      document.getElementById('seguimientoRut').innerText = rut;
+      document.getElementById('seguimientoResponsable').innerText = responsable;
+      document.getElementById('seguimientoUltimaAccion').innerText = 'Cobranza iniciada';
+
+      window.datosHitos = [
+        { titulo: 'Recepción y Cesión', descripcion: 'Pendiente', estado: 'pendiente' },
+        { titulo: 'Publicación en DICOM', descripcion: 'Pendiente', estado: 'pendiente' },
+        { titulo: 'Gestión Extrajudicial', descripcion: 'Pendiente', estado: 'pendiente' },
+        { titulo: 'Demanda Judicial', descripcion: 'Pendiente', estado: 'pendiente' },
+        { titulo: 'Cierre / Resultado', descripcion: 'Pendiente', estado: 'pendiente' }
+      ];
+      renderHitos(window.datosHitos);
+    }
+
+    function analizarFactura() {
+      const rut = document.getElementById('analisisRut').value;
+      const nombre = document.getElementById('analisisNombre').value;
+      const monto = document.getElementById('analisisMonto').value;
+      const fecha = new Date(document.getElementById('analisisFecha').value);
+      const hoy = new Date();
+
+      const diferenciaDias = Math.floor((hoy - fecha) / (1000 * 60 * 60 * 24));
+      let recomendacion = '';
+
+      if (isNaN(fecha)) {
+        recomendacion = '⚠️ Fecha inválida. Por favor, verifica la fecha de la factura.';
+      } else if (diferenciaDias > 365) {
+        recomendacion = `⚖️ Recomendamos iniciar un juicio ordinario de cobro de pesos, ya que la factura tiene más de un año desde su emisión.`;
+      } else {
+        recomendacion = `✅ Factura vigente para cobro ejecutivo. Recomendamos cederla a Segal para su cobro judicial.`;
+      }
+
+      const correo = `Estimado cliente:
+
+Analizando la factura de ${nombre} (RUT ${rut}), por un monto de $${monto}, con fecha de emisión ${fecha.toLocaleDateString()}, indicamos lo siguiente:
+
+${recomendacion}
+
+Adicionalmente, ofrecemos el servicio de publicación en DICOM. Para iniciar, requerimos la cesión de la factura a nombre de SEGAL S.A.
+
+Saludos cordiales.`;
+
+      document.getElementById('resultadoCorreo').value = correo;
+    }
+
+    function renderHitos(hitos) {
+      const contenedor = document.getElementById('hitos');
+      if (!contenedor) return;
+      contenedor.innerHTML = '';
+      hitos.forEach((hito, index) => {
+        const div = document.createElement('div');
+        div.className = 'hito ' + hito.estado;
+        div.innerHTML = `
+          <strong>📍 ${hito.titulo}</strong><br>
+          <small>${hito.descripcion}</small><br>
+          Estado: 
+          <select onchange="actualizarEstadoHito(${index}, this.value)">
+            <option value="pendiente" ${hito.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+            <option value="en-curso" ${hito.estado === 'en-curso' ? 'selected' : ''}>En curso</option>
+            <option value="completado" ${hito.estado === 'completado' ? 'selected' : ''}>Completado</option>
+          </select>
+        `;
+        contenedor.appendChild(div);
+      });
+      actualizarEstadoGeneral(hitos);
+    }
+
+    function actualizarEstadoHito(index, estado) {
+      window.datosHitos[index].estado = estado;
+      renderHitos(window.datosHitos);
+    }
+
+    function actualizarEstadoGeneral(hitos) {
+      const total = hitos.length;
+      const completados = hitos.filter(h => h.estado === 'completado').length;
+      const enCurso = hitos.filter(h => h.estado === 'en-curso').length;
+      let estado = 'Pendiente 🔴';
+      if (completados === total) estado = 'Completado 🟢';
+      else if (enCurso > 0 || completados > 0) estado = 'En curso 🟡';
+      const estadoElem = document.getElementById('seguimientoEstado');
+      if (estadoElem) estadoElem.innerText = estado;
+    }
+  </script>
+</head>
+<body>
+  <div class="container" id="menuPrincipal">
+    <img src="https://cdn.segal.cl/logos/gruposegal_cobranzas.png" alt="Logo Grupo Segal" class="logo">
+    <h1>GRUPO SEGAL - COBRANZA</h1>
+    <div>
+      <button id="btnInicio" class="modulo-btn" onclick="mostrarModulo('inicio')">📝 Iniciar Cobranza</button>
+      <button id="btnAnalisis" class="modulo-btn" onclick="mostrarModulo('analisis')">🔍 Análisis de Factura</button>
+    </div>
+  </div>
+
+  <div id="inicio" class="modulo-box">
+    <button class="submit" onclick="mostrarModulo('')">← Volver al Menú Principal</button>
+    <h2>Iniciar Nueva Cobranza</h2>
+    <input type="text" id="rutDeudor" placeholder="RUT del Deudor" />
+    <input type="text" id="empresaDeudora" placeholder="Empresa Deudora" />
+    <input type="text" id="montoFactura" placeholder="Monto de la Factura" />
+    <select id="responsableCobranza">
+      <option value="">Seleccionar Responsable</option>
+      <option value="Catalina Ramírez">Catalina Ramírez</option>
+      <option value="Sandy Molina">Sandy Molina</option>
+    </select>
+    <button class="submit" onclick="iniciarCobranza()">Iniciar</button>
+  </div>
+
+  <div id="analisis" class="modulo-box">
+    <button class="submit" onclick="mostrarModulo('')">← Volver al Menú Principal</button>
+    <h2>Análisis de Factura</h2>
+    <input type="text" id="analisisRut" placeholder="RUT del Deudor" />
+    <input type="text" id="analisisNombre" placeholder="Nombre del Deudor" />
+    <input type="text" id="analisisMonto" placeholder="Monto de la Factura" />
+    <input type="date" id="analisisFecha" placeholder="Fecha de Emisión de la Factura" />
+    <button class="submit" onclick="analizarFactura()">Analizar</button>
+    <h3>Resultado del Análisis</h3>
+    <textarea id="resultadoCorreo" rows="10" readonly></textarea>
+  </div>
+
+  <div id="seguimiento" class="modulo-box">
+    <button class="submit" onclick="mostrarModulo('')">← Volver al Menú Principal</button>
+    <h2>Factura en Cobranza - $<span id="seguimientoMonto"></span></h2>
+    <p><strong>Empresa Deudora:</strong> <span id="seguimientoEmpresa"></span></p>
+    <p><strong>RUT Deudor:</strong> <span id="seguimientoRut"></span></p>
+    <p><strong>Responsable:</strong> <span id="seguimientoResponsable"></span></p>
+    <p><strong>Última Acción:</strong> <span id="seguimientoUltimaAccion"></span></p>
+    <p><strong>Estado General:</strong> <span id="seguimientoEstado" style="font-weight: bold;">Pendiente 🔴</span></p>
+    <div id="hitos"></div>
+  </div>
+</body>
+</html>
